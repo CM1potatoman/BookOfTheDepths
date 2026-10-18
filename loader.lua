@@ -46,7 +46,7 @@ end)
 local function status(message)
     warn(PREFIX .. message)
     if label and label.Parent then
-        label.Text = "BOOK OF THE DEPTHS | STARTUP\\n" .. message
+        label.Text = "BOOK OF THE DEPTHS | STARTUP\n" .. message
     end
     task.wait()
 end
