@@ -22,12 +22,12 @@ pcall(function()
     gui.DisplayOrder = 2000
 
     label = Instance.new("TextLabel")
-    label.Size = UDim2.fromOffset(510, 96)
+    label.Size = UDim2.fromOffset(550, 126)
     label.Position = UDim2.fromOffset(20, 132)
     label.BackgroundColor3 = Color3.fromRGB(18, 21, 29)
     label.TextColor3 = Color3.fromRGB(226, 233, 245)
     label.BorderSizePixel = 0
-    label.TextSize = 16
+    label.TextSize = 15
     label.Font = Enum.Font.Code
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
@@ -115,7 +115,7 @@ local success, result = xpcall(function()
     bundle = patchModule(bundle, "__root", "Luma", {
         {
             'warn("[Luma/diag] INIT ERROR: " .. tostring(error))',
-            'shared.BOTD_InitError = tostring(error)\n\tif shared.BOTD_ReportStage then shared.BOTD_ReportStage("INIT ERROR: " .. tostring(error)) end\n\twarn("[Luma/diag] INIT ERROR: " .. tostring(error))'
+            'shared.BOTD_InitError = tostring(error)\n\tshared.BOTD_InitErrorStage = tostring(shared.BOTD_LastCoreStage or "before first checkpoint")\n\tshared.BOTD_InitTrace = (debug and debug.traceback and debug.traceback()) or "Trace unavailable"\n\tif shared.BOTD_ReportStage then shared.BOTD_ReportStage("ERROR AT " .. shared.BOTD_InitErrorStage .. "\\n" .. tostring(error)) end\n\twarn("[Luma/diag] INIT ERROR AT " .. shared.BOTD_InitErrorStage .. ": " .. tostring(error) .. "\\n" .. shared.BOTD_InitTrace)'
         },
     })
 
@@ -156,7 +156,7 @@ local success, result = xpcall(function()
     status("Compilation passed. Entering main initializer.")
     local value = run()
     if shared.BOTD_InitError then
-        status("INIT ERROR: " .. tostring(shared.BOTD_InitError))
+        status("INIT ERROR AT " .. tostring(shared.BOTD_InitErrorStage or shared.BOTD_LastCoreStage or "unknown") .. "\n" .. tostring(shared.BOTD_InitError))
     elseif shared.BOTD_MenuError then
         status("MENU ERROR: " .. tostring(shared.BOTD_MenuError))
     else
@@ -172,7 +172,7 @@ end
 
 task.delay(4, function()
     if shared.BOTD_InitError then
-        status("INIT ERROR: " .. tostring(shared.BOTD_InitError))
+        status("INIT ERROR AT " .. tostring(shared.BOTD_InitErrorStage or shared.BOTD_LastCoreStage or "unknown") .. "\n" .. tostring(shared.BOTD_InitError))
     elseif shared.BOTD_MenuError then
         status("MENU ERROR: " .. tostring(shared.BOTD_MenuError))
     elseif not shared.Luma then
