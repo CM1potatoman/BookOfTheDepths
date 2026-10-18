@@ -59,6 +59,10 @@ local function traceback(message)
     return detail
 end
 
+shared.BOTD_ReportStage = status
+shared.BOTD_InitError = nil
+shared.BOTD_MenuError = nil
+
 status("Loader entered. Preparing downloads.")
 
 local success, result = xpcall(function()
@@ -84,13 +88,80 @@ local success, result = xpcall(function()
         #bundle, EXPECTED_BYTES
     ))
 
+
+    local function replaceOnce(text, old, new, label)
+        local first = text:find(old, 1, true)
+        assert(first, "Patch marker missing: " .. label)
+        assert(not text:find(old, first + #old, true), "Patch marker duplicated: " .. label)
+        return text:sub(1, first - 1) .. new .. text:sub(first + #old)
+    end
+
+    local function patchModule(text, name, nextName, replacements)
+        local marker = '__bundle_register("' .. name .. '",'
+        local nextMarker = '__bundle_register("' .. nextName .. '",'
+        local first = assert(text:find(marker, 1, true), "Missing module " .. name)
+        local following = assert(text:find(nextMarker, first + #marker, true), "Missing module " .. nextName)
+        local section = text:sub(first, following - 1)
+        for _, pair in ipairs(replacements) do
+            section = replaceOnce(section, pair[1], pair[2], name .. ": " .. pair[1]:sub(1, 40))
+        end
+        return text:sub(1, first - 1) .. section .. text:sub(following)
+    end
+
+    local function checkpoint(name)
+        return 'if shared.BOTD_ReportStage then shared.BOTD_ReportStage(' .. string.format("%q", name) .. ') end\n\t'
+    end
+
+    bundle = patchModule(bundle, "__root", "Luma", {
+        {
+            'warn("[Luma/diag] INIT ERROR: " .. tostring(error))',
+            'shared.BOTD_InitError = tostring(error)\n\tif shared.BOTD_ReportStage then shared.BOTD_ReportStage("INIT ERROR: " .. tostring(error)) end\n\twarn("[Luma/diag] INIT ERROR: " .. tostring(error))'
+        },
+    })
+
+    bundle = patchModule(bundle, "Luma", "Features/Automation/AutoSaramed", {
+        { 'function Luma.init()', 'function Luma.init()\n\t' .. checkpoint("CORE: entered Luma.init") },
+        { '\t\tHooking.earlyInit()', '\t\t' .. checkpoint("CORE: early hooking") .. 'Hooking.earlyInit()' },
+        { '\t\tKeyHandling.init()', '\t\t' .. checkpoint("CORE: key handling") .. 'KeyHandling.init()' },
+        { '\t\tHooking.init()', '\t\t' .. checkpoint("CORE: main hooking") .. 'Hooking.init()' },
+        { '\tCoreGuiManager.set()', '\t' .. checkpoint("CORE: GUI parent setup") .. 'CoreGuiManager.set()' },
+        { '\tPersistentData.init()', '\t' .. checkpoint("CORE: persistent data") .. 'PersistentData.init()' },
+        { '\tQueuedBlocking.init()', '\t' .. checkpoint("CORE: queued blocking") .. 'QueuedBlocking.init()' },
+        { '\tSaveManager.init()', '\t' .. checkpoint("CORE: timing manager") .. 'SaveManager.init()' },
+        { '\tModuleManager.refresh()', '\t' .. checkpoint("CORE: module refresh") .. 'ModuleManager.refresh()' },
+        { '\tControlModule.init()', '\t' .. checkpoint("CORE: control module") .. 'ControlModule.init()' },
+        { '\tFeatures.init()', '\t' .. checkpoint("CORE: feature initialization") .. 'Features.init()' },
+        { '\tMenu.init()', '\t' .. checkpoint("CORE: opening Linoria menu") .. 'Menu.init()\n\t' .. checkpoint("CORE: menu initialized") },
+    })
+
+    bundle = patchModule(bundle, "Menu", "Features/Custom/Custom", {
+        { 'function Menu.init()', 'function Menu.init()\n\t' .. checkpoint("MENU: creating window") },
+        { 'AutoShow = not shared.Luma.silent', 'AutoShow = true' },
+        { '\tHomeTab.init(window)', '\t' .. checkpoint("MENU: creating Home tab") .. 'HomeTab.init(window)' },
+        {
+            '\tCombatTab.init(window)',
+            '\tlocal combatOK, combatError = pcall(CombatTab.init, window)\n\tif not combatOK then\n\t\tshared.BOTD_MenuError = "Combat tab: " .. tostring(combatError)\n\t\tif shared.BOTD_ReportStage then shared.BOTD_ReportStage("MENU ERROR: " .. shared.BOTD_MenuError) end\n\t\twarn("[BOTD/menu] " .. shared.BOTD_MenuError)\n\tend'
+        },
+        {
+            '\tCombatTab.initAntiExploit(window)',
+            '\tlocal antiOK, antiError = pcall(CombatTab.initAntiExploit, window)\n\tif not antiOK then\n\t\tshared.BOTD_MenuError = "Anti-Exploit tab: " .. tostring(antiError)\n\t\tif shared.BOTD_ReportStage then shared.BOTD_ReportStage("MENU ERROR: " .. shared.BOTD_MenuError) end\n\t\twarn("[BOTD/menu] " .. shared.BOTD_MenuError)\n\tend'
+        },
+    })
+
+
     status("Downloaded 4,349,988 bytes. Compiling Luau.")
     local run, compileError = loadstring(bundle)
     assert(run, "Compilation failed: " .. tostring(compileError))
 
     status("Compilation passed. Entering main initializer.")
     local value = run()
-    status("Initializer returned. UI is not yet verified.")
+    if shared.BOTD_InitError then
+        status("INIT ERROR: " .. tostring(shared.BOTD_InitError))
+    elseif shared.BOTD_MenuError then
+        status("MENU ERROR: " .. tostring(shared.BOTD_MenuError))
+    else
+        status("Initializer returned. Inspect UI; no error captured.")
+    end
     return value
 end, traceback)
 
@@ -100,10 +171,14 @@ if not success then
 end
 
 task.delay(4, function()
-    if not (shared and shared.Luma) then
-        status("WARNING: No Luma instance found. Check initialization.")
+    if shared.BOTD_InitError then
+        status("INIT ERROR: " .. tostring(shared.BOTD_InitError))
+    elseif shared.BOTD_MenuError then
+        status("MENU ERROR: " .. tostring(shared.BOTD_MenuError))
+    elseif not shared.Luma then
+        status("WARNING: No Luma instance created. Check [Luma/diag] warnings.")
     else
-        status("Runtime instance found. If no menu appears, initialization/UI failed.")
+        status("Runtime present. If menu is missing, inspect F9 for [BOTD/menu] errors.")
     end
 end)
 
