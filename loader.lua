@@ -3,64 +3,107 @@ local EXPECTED_BYTES = 4349988
 local PART_COUNT = 14
 local PREFIX = "[BOTD/startup] "
 
-local function log(message)
-    print(PREFIX .. message)
+local player = game:GetService("Players").LocalPlayer
+local gui
+local label
+
+pcall(function()
+    local parent = player:WaitForChild("PlayerGui", 15)
+    assert(parent, "PlayerGui unavailable")
+
+    local previous = parent:FindFirstChild("BOTD_StartupStatus")
+    if previous then
+        previous:Destroy()
+    end
+
+    gui = Instance.new("ScreenGui")
+    gui.Name = "BOTD_StartupStatus"
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 2000
+
+    label = Instance.new("TextLabel")
+    label.Size = UDim2.fromOffset(510, 96)
+    label.Position = UDim2.fromOffset(20, 132)
+    label.BackgroundColor3 = Color3.fromRGB(18, 21, 29)
+    label.TextColor3 = Color3.fromRGB(226, 233, 245)
+    label.BorderSizePixel = 0
+    label.TextSize = 16
+    label.Font = Enum.Font.Code
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.TextWrapped = true
+    label.Text = "BOOK OF THE DEPTHS | STARTING"
+    label.Parent = gui
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0, 12)
+    padding.PaddingRight = UDim.new(0, 12)
+    padding.Parent = label
+
+    gui.Parent = parent
+end)
+
+local function status(message)
+    warn(PREFIX .. message)
+    if label and label.Parent then
+        label.Text = "BOOK OF THE DEPTHS | STARTUP\\n" .. message
+    end
+    task.wait()
 end
 
 local function traceback(message)
-    local output = tostring(message)
+    local detail = tostring(message)
     if debug and type(debug.traceback) == "function" then
-        output = debug.traceback(output, 2)
+        detail = debug.traceback(detail, 2)
     end
-    return output
+    return detail
 end
 
-log("Loader entered.")
+status("Loader entered. Preparing downloads.")
 
 local success, result = xpcall(function()
     local parts = table.create(PART_COUNT)
 
     for index = 1, PART_COUNT do
         local path = string.format("parts/part_%02d.lua.txt", index)
+        status(string.format("Downloading source part %d/%d", index, PART_COUNT))
+
         local fetched, response = pcall(function()
             return game:HttpGet(BASE_URL .. path)
         end)
-
         if not fetched or type(response) ~= "string" then
             error("Failed to download " .. path .. ": " .. tostring(response))
         end
-
         parts[index] = response
-        if index == 1 or index == 7 or index == PART_COUNT then
-            log(string.format("Download progress: %d/%d parts.", index, PART_COUNT))
-        end
     end
 
+    status("Joining source parts.")
     local bundle = table.concat(parts)
-    log(string.format("Downloaded %d bytes; expected %d.", #bundle, EXPECTED_BYTES))
-    assert(#bundle == EXPECTED_BYTES, "Source size mismatch. One or more parts are incomplete.")
+    assert(#bundle == EXPECTED_BYTES, string.format(
+        "Source size mismatch: %d bytes received, expected %d",
+        #bundle, EXPECTED_BYTES
+    ))
 
-    log("Compiling bundled Luau.")
-    local compiled, compileError = loadstring(bundle)
-    assert(compiled, "Compilation failed: " .. tostring(compileError))
+    status("Downloaded 4,349,988 bytes. Compiling Luau.")
+    local run, compileError = loadstring(bundle)
+    assert(run, "Compilation failed: " .. tostring(compileError))
 
-    log("Compilation succeeded. Entering main initializer.")
-    local value = compiled()
-    log("Main initializer returned. Menu availability has not been verified.")
+    status("Compilation passed. Entering main initializer.")
+    local value = run()
+    status("Initializer returned. UI is not yet verified.")
     return value
 end, traceback)
 
 if not success then
-    warn(PREFIX .. "FATAL: " .. tostring(result))
+    status("FAILED: " .. tostring(result):sub(1, 350))
     error(result, 0)
 end
 
-task.delay(5, function()
-    local luma = shared and shared.Luma
-    if not luma then
-        warn(PREFIX .. "No initialized Luma instance detected. Check preceding errors.")
+task.delay(4, function()
+    if not (shared and shared.Luma) then
+        status("WARNING: No Luma instance found. Check initialization.")
     else
-        log("Luma instance detected. If the menu is missing, inspect [Luma/diag] warnings above.")
+        status("Runtime instance found. If no menu appears, initialization/UI failed.")
     end
 end)
 
