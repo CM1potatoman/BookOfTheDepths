@@ -109,7 +109,7 @@ local success, result = xpcall(function()
     end
 
     local function checkpoint(name)
-        return 'if shared.BOTD_ReportStage then shared.BOTD_ReportStage(' .. string.format("%q", name) .. ') end\n\t'
+        return 'shared.BOTD_LastCoreStage = ' .. string.format("%q", name) .. '\n\tif shared.BOTD_ReportStage then shared.BOTD_ReportStage(' .. string.format("%q", name) .. ') end\n\t'
     end
 
     bundle = patchModule(bundle, "__root", "Luma", {
@@ -178,7 +178,7 @@ task.delay(4, function()
     elseif not shared.Luma then
         status("WARNING: No Luma instance created. Check [Luma/diag] warnings.")
     else
-        status("Runtime present. If menu is missing, inspect F9 for [BOTD/menu] errors.")
+        status("Last stage: " .. tostring(shared.BOTD_LastCoreStage or "unknown") .. ". If menu is missing, inspect F9.")
     end
 end)
 
