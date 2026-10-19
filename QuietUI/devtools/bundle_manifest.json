@@ -6,5 +6,11 @@
     "CM1_Quiet_04.txt": 554707
   },
   "total_bytes": 4353960,
-  "registered_modules": 164
+  "registered_modules": 164,
+  "git_blob_sha1": {
+    "CM1_Quiet_01.txt": "efb99b277d5a0084413dd7ddef7e3b50458bf5a3",
+    "CM1_Quiet_02.txt": "b9ed321ea3aa256585c0acecf010dd3f71486ae4",
+    "CM1_Quiet_03.txt": "18aa46da7bba9441bcfca6ad762d95d12a0b2d3f",
+    "CM1_Quiet_04.txt": "fecd8d370010bf5d1ba0c523a9b11d266bd28303"
+  }
 }
