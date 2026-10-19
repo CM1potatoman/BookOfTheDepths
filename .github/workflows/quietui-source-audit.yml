@@ -55,6 +55,15 @@ jobs:
           "$compiler" --null QuietUI/devtools/MemorySampler.lua
           "$compiler" --null QuietUI/devtools/linoria_smoke.lua
           rm -f QuietUI/devtools/assembled.check.luau
+      - name: Exercise isolated Linoria adapter contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python QuietUI/devtools/ui_adapter_harness.py --out "$RUNNER_TEMP/ui-adapter-smoke.luau"
+          runner="$(find "$RUNNER_TEMP/luau" -type f -name luau -print -quit)"
+          test -n "$runner"
+          chmod +x "$runner"
+          "$runner" "$RUNNER_TEMP/ui-adapter-smoke.luau"
       - name: Exercise loader diagnostics with mocked Luau runtime
         shell: bash
         run: |
