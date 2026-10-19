@@ -1,5 +1,5 @@
 -- Standalone interface-only smoke test.
--- Run only in an authorized Roblox Studio test environment.
+-- Run in a controlled test environment that provides game:HttpGet and loadstring.
 -- Does not load BOTD modules or change game behavior.
 
 local upstream = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/1be38aa599bb1f6a7c28f47e6fc13ade52dd0acd/"
