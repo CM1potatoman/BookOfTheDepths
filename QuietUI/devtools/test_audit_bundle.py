@@ -1,5 +1,6 @@
 """Local tests for the bundle auditor. Uses synthetic text; executes no Luau."""
 
+from hashlib import sha1
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -60,6 +61,16 @@ class BundleAuditTests(unittest.TestCase):
         self.assertEqual(result["status"], "pass")
         issues = [i for i in result["issues"] if i["code"] == "legacy_ui_imports"]
         self.assertEqual(issues[0]["modules"], ["__root"])
+
+    def test_hash_mismatch_on_equal_length_change(self):
+        original_hash = sha1(b"blob " + str(len(self.source)).encode() + b"\x00" + self.source).hexdigest()
+        self.manifest["git_blob_sha1"] = {"CM1_Quiet_01.txt": original_hash}
+        modified = self.source.replace(b"Linoria", b"LinoriX")
+        self.assertEqual(len(modified), len(self.source))
+        (self.parts / "CM1_Quiet_01.txt").write_bytes(modified)
+        result = check_bundle(self.root, self.manifest)
+        self.assertEqual(result["status"], "fail")
+        self.assertIn("part_hash_mismatch", [i["code"] for i in result["issues"]])
 
     def test_entry_point_required(self):
         source = self.source.replace(b'return __bundle_require("__root")', b'return nil')
