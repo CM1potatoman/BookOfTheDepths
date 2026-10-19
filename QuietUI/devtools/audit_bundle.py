@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from bisect import bisect_right
 from collections import Counter
-from hashlib import sha256
+from hashlib import sha1, sha256
 import json
 from pathlib import Path
 import re
@@ -19,6 +19,7 @@ LEGACY_REQUIRE = re.compile(rb'require\(["\']GUI/Library["\']\)')
 def check_bundle(root: Path, manifest: dict) -> dict:
     parts_dir = root / "QuietUI" / "parts"
     expected = manifest["parts"]
+    expected_hashes = manifest.get("git_blob_sha1", {})
     issues: list[dict] = []
     chunks: list[bytes] = []
     actual_sizes: dict[str, int] = {}
@@ -31,6 +32,13 @@ def check_bundle(root: Path, manifest: dict) -> dict:
         body = file.read_bytes()
         actual_sizes[filename] = len(body)
         chunks.append(body)
+        if filename in expected_hashes:
+            prefix = b"blob " + str(len(body)).encode("ascii") + b"\x00"
+            actual_hash = sha1(prefix + body).hexdigest()
+            if actual_hash != expected_hashes[filename]:
+                issues.append({"severity": "error", "code": "part_hash_mismatch",
+                               "file": filename, "expected": expected_hashes[filename],
+                               "actual": actual_hash})
         if len(body) != expected_size:
             issues.append({"severity": "error", "code": "part_size_mismatch", "file": filename,
                            "expected": expected_size, "actual": len(body)})
