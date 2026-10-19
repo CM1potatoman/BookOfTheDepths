@@ -17,7 +17,7 @@ permissions:
 jobs:
   source-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,3 +29,28 @@ jobs:
         run: python -m unittest discover -s QuietUI/devtools -p "test_*.py" -v
       - name: Validate raw source parts without executing Luau
         run: python QuietUI/devtools/audit_bundle.py --json
+      - name: Compile assembled Luau and standalone components
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 \
+            --output "$RUNNER_TEMP/luau.zip" \
+            https://github.com/luau-lang/luau/releases/download/0.743/luau-ubuntu.zip
+          mkdir -p "$RUNNER_TEMP/luau"
+          unzip -q "$RUNNER_TEMP/luau.zip" -d "$RUNNER_TEMP/luau"
+          compiler="$(find "$RUNNER_TEMP/luau" -type f -name luau-compile -print -quit)"
+          test -n "$compiler"
+          chmod +x "$compiler"
+          python - <<'PY'
+          from pathlib import Path
+          base = Path("QuietUI/parts")
+          chunks = [base / f"CM1_Quiet_{i:02d}.txt" for i in range(1, 5)]
+          assembled = Path("QuietUI/devtools/assembled.check.luau")
+          assembled.write_bytes(b"".join(part.read_bytes() for part in chunks))
+          print(f"Assembled {assembled.stat().st_size:,} bytes for syntax-only compilation")
+          PY
+          "$compiler" --null QuietUI/devtools/assembled.check.luau
+          "$compiler" --null QuietUI/loader.lua
+          "$compiler" --null QuietUI/devtools/RecoveryScope.lua
+          "$compiler" --null QuietUI/devtools/MemorySampler.lua
+          rm -f QuietUI/devtools/assembled.check.luau
