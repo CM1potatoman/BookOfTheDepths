@@ -21,6 +21,10 @@ The manifest describes the source at the original QuietUI upload. After an inten
 - RecoveryScope.lua owns temporary threads, RBXScriptConnections, Instances, and cleanup callbacks. Closing a scope stops its repeating tasks and releases tracked resources. It uses no game-specific hooks.
 - MemorySampler.lua reads Stats.GetTotalMemoryUsageMb and, when supported, gcinfo. Its watcher needs an injected scope implementing every(interval, callback).
 
+The independent smoke test, `linoria_smoke.lua`, opens only a Linoria window with basic controls. It does not load BOTD features. It requires an environment providing `game:HttpGet` and `loadstring`; standard client Roblox Studio scripts do not necessarily provide these APIs. A passing compile check alone does not prove its UI rendered.
+
+The updated `QuietUI/loader.lua` on the review branch reports its initial stage through warnings and `getgenv().CM1QuietUIStatus` when available. The status `returned` means only that the top-level function returned without raising a synchronous error. It does not confirm that asynchronous game initialization, UI components, or background tasks succeeded.
+
 These Luau files are intentionally independent and are **not integrated** into the current bundle. Luau compilation, Studio runtime, live-game behavior, and reload tests have not been verified.
 
 Memory figures are **whole-client** measurements, not per-feature allocations. A client-memory increase alone does not establish a leak. Compare multiple repeated runs against a baseline and include sample times and workload.
