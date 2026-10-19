@@ -6,19 +6,28 @@ local upstream = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/
 local current
 local alive = false
 
-local function loadDependency(path)
-    local source = game:HttpGet(upstream .. path)
-    assert(type(source) == "string" and #source > 0, "Empty dependency: " .. path)
+local function loadLibrary()
+    local localModule = nil
+    if script and type(script.FindFirstChild) == "function" then
+        localModule = script:FindFirstChild("LinoriaLibrary")
+    end
+    if localModule and localModule:IsA("ModuleScript") then
+        return require(localModule)
+    end
+
+    if type(loadstring) ~= "function" or type(game.HttpGet) ~= "function" then
+        error("Studio LocalScript: add a child ModuleScript named LinoriaLibrary containing the reviewed Linoria Library.lua source")
+    end
+
+    local source = game:HttpGet(upstream .. "Library.lua")
+    assert(type(source) == "string" and #source > 0, "Empty Linoria response")
     local factory, err = loadstring(source)
-    assert(type(factory) == "function", tostring(err or path .. " did not compile"))
+    assert(type(factory) == "function", tostring(err or "Linoria failed to compile"))
     return factory()
 end
 
 local function initialize()
-    assert(type(loadstring) == "function", "loadstring unavailable")
-    assert(type(game.HttpGet) == "function", "HttpGet unavailable")
-
-    local Library = loadDependency("Library.lua")
+    local Library = loadLibrary()
     assert(type(Library) == "table" and type(Library.CreateWindow) == "function",
         "Linoria did not return a Library")
     current = Library
