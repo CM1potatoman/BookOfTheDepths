@@ -53,4 +53,5 @@ jobs:
           "$compiler" --null QuietUI/loader.lua
           "$compiler" --null QuietUI/devtools/RecoveryScope.lua
           "$compiler" --null QuietUI/devtools/MemorySampler.lua
+          "$compiler" --null QuietUI/devtools/linoria_smoke.lua
           rm -f QuietUI/devtools/assembled.check.luau
