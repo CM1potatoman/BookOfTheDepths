@@ -1,0 +1,108 @@
+name: QuietUI static source audit
+
+on:
+  push:
+    paths:
+      - "QuietUI/**"
+      - ".github/workflows/quietui-source-audit.yml"
+  pull_request:
+    paths:
+      - "QuietUI/**"
+      - ".github/workflows/quietui-source-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Unit tests for static auditor
+        run: python -m unittest discover -s QuietUI/devtools -p "test_*.py" -v
+      - name: Validate raw source parts without executing Luau
+        run: python QuietUI/devtools/audit_bundle.py --json
+      - name: Audit legacy GUI dependency contract
+        run: python QuietUI/devtools/legacy_ui_inventory.py --strict
+      - name: Compile assembled Luau and standalone components
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 \
+            --output "$RUNNER_TEMP/luau.zip" \
+            https://github.com/luau-lang/luau/releases/download/0.743/luau-ubuntu.zip
+          mkdir -p "$RUNNER_TEMP/luau"
+          unzip -q "$RUNNER_TEMP/luau.zip" -d "$RUNNER_TEMP/luau"
+          compiler="$(find "$RUNNER_TEMP/luau" -type f -name luau-compile -print -quit)"
+          test -n "$compiler"
+          chmod +x "$compiler"
+          python - <<'PY'
+          from pathlib import Path
+          base = Path("QuietUI/parts")
+          chunks = [base / f"CM1_Quiet_{i:02d}.txt" for i in range(1, 5)]
+          assembled = Path("QuietUI/devtools/assembled.check.luau")
+          assembled.write_bytes(b"".join(part.read_bytes() for part in chunks))
+          print(f"Assembled {assembled.stat().st_size:,} bytes for syntax-only compilation")
+          PY
+          "$compiler" --null QuietUI/devtools/assembled.check.luau
+          "$compiler" --null QuietUI/loader.lua
+          "$compiler" --null QuietUI/devtools/RecoveryScope.lua
+          "$compiler" --null QuietUI/devtools/MemorySampler.lua
+          "$compiler" --null QuietUI/devtools/linoria_smoke.lua
+          "$compiler" --null QuietUI/devtools/executor_preflight.lua
+          rm -f QuietUI/devtools/assembled.check.luau
+      - name: Exercise isolated Linoria adapter contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python QuietUI/devtools/ui_adapter_harness.py --out "$RUNNER_TEMP/ui-adapter-smoke.luau"
+          runner="$(find "$RUNNER_TEMP/luau" -type f -name luau -print -quit)"
+          test -n "$runner"
+          chmod +x "$runner"
+          "$runner" "$RUNNER_TEMP/ui-adapter-smoke.luau"
+      - name: Exercise native Linoria FloatingWindow contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python QuietUI/devtools/floating_window_harness.py --out "$RUNNER_TEMP/floating-window-check.luau"
+          runner="$(find "$RUNNER_TEMP/luau" -type f -name luau -print -quit)"
+          test -n "$runner"
+          chmod +x "$runner"
+          "$runner" "$RUNNER_TEMP/floating-window-check.luau"
+      - name: Exercise MemorySampler controlled baselines
+        shell: bash
+        run: |
+          set -euo pipefail
+          python QuietUI/devtools/memory_sampler_harness.py --out "$RUNNER_TEMP/memory-sampler-check.luau"
+          runner="$(find "$RUNNER_TEMP/luau" -type f -name luau -print -quit)"
+          test -n "$runner"
+          chmod +x "$runner"
+          "$runner" "$RUNNER_TEMP/memory-sampler-check.luau"
+      - name: Exercise RecoveryScope lifecycle with mocked Luau runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python QuietUI/devtools/recovery_scope_harness.py --out "$RUNNER_TEMP/recovery-scope-check.luau"
+          runner="$(find "$RUNNER_TEMP/luau" -type f -name luau -print -quit)"
+          test -n "$runner"
+          chmod +x "$runner"
+          "$runner" "$RUNNER_TEMP/recovery-scope-check.luau"
+      - name: Exercise loader diagnostics with mocked Luau runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/loader-harness"
+          python QuietUI/devtools/loader_harness.py --out "$RUNNER_TEMP/loader-harness"
+          runner="$(find "$RUNNER_TEMP/luau" -type f -name luau -print -quit)"
+          test -n "$runner"
+          chmod +x "$runner"
+          for case in success download-error size-error compile-error runtime-error; do
+            "$runner" "$RUNNER_TEMP/loader-harness/$case.luau"
+          done

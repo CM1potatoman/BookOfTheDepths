@@ -9636,15 +9636,41 @@ return LPH_NO_VIRTUALIZE(function()
 		Library:Notify(string.format(str, ...), 30.0)
 	end
 
-	-- warn/trace are no-ops. They used to emit "[Luma Recode]"-prefixed lines to the Roblox LogService
-	-- (via warn/print), which the anticheat exfiltrates from GetLogHistory and bans on. Kept as empty
-	-- functions so every existing call site is a cheap no-op. Notifications (notify/qnotify/longNotify/
-	-- mnnotify) still work -- they go to luma's own UI, never LogService.
-	---@param str string
-	function Logger.warn(str, ...) end
+	-- Opt-in, bounded development diagnostics. No console output or network activity.
+	local function recordDiagnostic(level, str, ...)
+		if type(getgenv) ~= "function" then
+			return
+		end
+		local envOk, env = pcall(getgenv)
+		if not envOk or type(env) ~= "table" or env.CM1QuietUIDebug ~= true then
+			return
+		end
+		local formatOk, message = pcall(string.format, tostring(str), ...)
+		if not formatOk then
+			message = tostring(str)
+		end
+		local entries = env.CM1QuietUIDiagnostics
+		if type(entries) ~= "table" then
+			entries = {}
+			env.CM1QuietUIDiagnostics = entries
+		end
+		if #entries >= 100 then
+			table.remove(entries, 1)
+		end
+		entries[#entries + 1] = {
+			level = level,
+			message = message,
+			timestamp = os.clock(),
+		}
+	end
 
-	---@param str string
-	function Logger.trace(str, ...) end
+	function Logger.warn(str, ...)
+		recordDiagnostic("warn", str, ...)
+	end
+
+	function Logger.trace(str, ...)
+		recordDiagnostic("trace", str, ...)
+	end
 
 	return Logger
 end)()
@@ -21137,10 +21163,28 @@ return LPH_NO_VIRTUALIZE(function()
 		table.clear(stats)
 	end
 
+	local reportingThread
+
+	function Profiler.stop()
+		if not enabled then
+			return
+		end
+		enabled = false
+		local activeThread = reportingThread
+		reportingThread = nil
+		if activeThread and type(task.cancel) == "function" then
+			pcall(task.cancel, activeThread)
+		end
+		table.clear(stats)
+	end
+
 	if enabled then
-		task.spawn(function()
-			while true do
+		reportingThread = task.spawn(function()
+			while enabled do
 				task.wait(reportInterval)
+				if not enabled then
+					break
+				end
 				Profiler.report()
 			end
 		end)

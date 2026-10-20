@@ -7683,8 +7683,8 @@ __bundle_register("Menu/Objects/FloatingWindow", function(require, _LOADED, __bu
 -- Reusable floating, draggable window (title bar + close button + body) parented to the menu ScreenGui.
 -- new{ title, size, position } -> { frame, body, Show, Hide, Toggle, IsOpen, SetTitle }. Starts hidden.
 
----@module GUI.Library
-local Library = require("GUI/Library")
+---@module GUI.Linoria
+local Library = require("GUI/Linoria")
 
 local FloatingWindow = {}
 
@@ -19682,7 +19682,7 @@ __bundle_register("GUI/Linoria", function(require, _LOADED, __bundle_register, _
 -- Gameplay and timing modules remain under their original names.
 
 local Legacy = require("GUI/Library")
-local REPO = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
+local REPO = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/1be38aa599bb1f6a7c28f47e6fc13ade52dd0acd/"
 
 local ok, LibraryOrError = pcall(function()
     local source = game:HttpGet(REPO .. "Library.lua")
@@ -19938,7 +19938,7 @@ __bundle_register("GUI/LinoriaAddons", function(require, _LOADED, __bundle_regis
 -- Official Linoria addons, loaded from the same upstream repository.
 -- The interface is initialized first so addon settings use Linoria's own control tables.
 local Library = require("GUI/Linoria")
-local REPO = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/"
+local REPO = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/1be38aa599bb1f6a7c28f47e6fc13ade52dd0acd/addons/"
 local Addons = {}
 for _, name in ipairs({ "SaveManager", "ThemeManager" }) do
     local ok, result = pcall(function()
