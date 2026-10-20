@@ -46,3 +46,7 @@ The `quietui-linoria-stability-20261019` loader downloads the corresponding bran
 ## Integrated resume lifecycle
 
 The development bundle registers `Utility/RecoveryScope` and uses it to manage the ten conditional resume tasks in `Luma.init()`. `Luma.detach()` cancels owned tasks before the other cleanup calls. Optional errors are recorded in a bounded `getgenv().CM1QuietUIErrors` list only when `getgenv().CM1QuietUIDebug == true`. Gameplay feature modules are unchanged. Runtime execution has not yet been verified.
+
+## Legacy GUI migration inventory
+
+Run `python QuietUI/devtools/legacy_ui_inventory.py --json` for a per-module list of legacy UI dependencies and the methods/properties each consumer calls. `--strict` rejects new legacy consumers relative to the existing 30-module baseline. Existing consumers can be migrated and removed from that list without breaking the check. This tool does not remove the legacy implementation or establish visual compatibility.
