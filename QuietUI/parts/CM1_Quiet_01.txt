@@ -206,46 +206,48 @@ end
 
 function RecoveryScope:spawn(callback, ...)
     assert(type(callback) == "function", "callback must be a function")
-    if self._closed then
-        return nil
-    end
+    if self._closed then return nil end
     local args = table.pack(...)
-    local handle = task.spawn(function()
-        if self._closed then
-            return
+    local finished = false
+    local handle
+    handle = task.spawn(function()
+        if not self._closed then
+            local ok, err = xpcall(function()
+                callback(table.unpack(args, 1, args.n))
+            end, debug.traceback)
+            if not ok and self._onError then
+                pcall(self._onError, err)
+            end
         end
-        local ok, err = xpcall(function()
-            callback(table.unpack(args, 1, args.n))
-        end, debug.traceback)
-        if not ok and self._onError then
-            pcall(self._onError, err)
-        end
+        finished = true
+        if handle then self:forget(handle) end
     end)
-    return self:track(handle)
+    if not finished then self:track(handle) end
+    return handle
 end
 
 function RecoveryScope:every(seconds, callback)
     assert(type(seconds) == "number" and seconds >= 0.05,
         "interval must be a number >= 0.05")
     assert(type(callback) == "function", "callback must be a function")
-    if self._closed then
-        return nil
-    end
-    return self:track(task.spawn(function()
+    if self._closed then return nil end
+    local finished = false
+    local handle
+    handle = task.spawn(function()
         while not self._closed do
             task.wait(seconds)
-            if self._closed then
-                break
-            end
+            if self._closed then break end
             local ok, err = xpcall(callback, debug.traceback)
             if not ok then
-                if self._onError then
-                    pcall(self._onError, err)
-                end
+                if self._onError then pcall(self._onError, err) end
                 break
             end
         end
-    end))
+        finished = true
+        if handle then self:forget(handle) end
+    end)
+    if not finished then self:track(handle) end
+    return handle
 end
 
 function RecoveryScope:count()

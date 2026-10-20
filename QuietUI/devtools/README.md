@@ -54,3 +54,7 @@ Run `python QuietUI/devtools/legacy_ui_inventory.py --json` for a per-module lis
 ## Opt-in diagnostics
 
 When `getgenv().CM1QuietUIDebug == true`, `Utility/Logger.warn` and `.trace` append records to `getgenv().CM1QuietUIDiagnostics`, keeping only the last 100 entries. This does not print, transmit, or persist diagnostics. With the flag off, calls return without buffering. Resume-worker errors are separately buffered in `CM1QuietUIErrors` with a 50-entry limit. These buffers do not validate runtime behavior; use them with reproducible test steps.
+
+## RecoveryScope lifecycle regression
+
+The development branch carries the same RecoveryScope implementation in `devtools/RecoveryScope.lua` and the bundled `Utility/RecoveryScope` module. Completed/failed worker registrations now retire immediately instead of remaining referenced until unload. CI executes `recovery_scope_fixture.luau` in mocked Luau, checking completion, cancellation, error isolation and 50 consecutive scope cycles. This is not an in-game reload verification.

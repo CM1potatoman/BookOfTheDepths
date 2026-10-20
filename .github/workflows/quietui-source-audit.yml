@@ -67,6 +67,15 @@ jobs:
           test -n "$runner"
           chmod +x "$runner"
           "$runner" "$RUNNER_TEMP/ui-adapter-smoke.luau"
+      - name: Exercise RecoveryScope lifecycle with mocked Luau runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python QuietUI/devtools/recovery_scope_harness.py --out "$RUNNER_TEMP/recovery-scope-check.luau"
+          runner="$(find "$RUNNER_TEMP/luau" -type f -name luau -print -quit)"
+          test -n "$runner"
+          chmod +x "$runner"
+          "$runner" "$RUNNER_TEMP/recovery-scope-check.luau"
       - name: Exercise loader diagnostics with mocked Luau runtime
         shell: bash
         run: |
