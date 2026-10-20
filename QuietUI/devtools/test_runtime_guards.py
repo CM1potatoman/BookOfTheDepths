@@ -1,5 +1,7 @@
 """Static guard regression tests for the QuietUI bundle."""
 from pathlib import Path
+import json
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,6 +57,18 @@ class TestRuntimeGuards(unittest.TestCase):
         self.assertIn("CM1QuietUIDebug", code)
         self.assertIn("if #entries >= 100 then", code)
         self.assertNotIn("function Logger.warn(str, ...) end", code)
+
+    def test_loader_matches_current_manifest(self):
+        manifest = json.loads((ROOT / "QuietUI/devtools/bundle_manifest.json").read_text())
+        loader = (ROOT / "QuietUI/loader.lua").read_text()
+        match = re.search(r"local expected = \{ ([\d, ]+) \}", loader)
+        self.assertIsNotNone(match)
+        sizes = [int(value) for value in match.group(1).split(",")]
+        actual = [manifest["parts"][f"CM1_Quiet_{i:02d}.txt"] for i in range(1, 5)]
+        self.assertEqual(sizes, actual)
+        total = re.search(r"local expectedTotal = (\d+)", loader)
+        self.assertIsNotNone(total)
+        self.assertEqual(int(total.group(1)), manifest["total_bytes"])
 
     def test_linoria_and_addons_pinned(self):
         library = self.module("GUI/Linoria")
