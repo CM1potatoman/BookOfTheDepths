@@ -1,6 +1,6 @@
 # QuietUI recovery tooling
 
-This directory contains standalone, read-only diagnostics and lifecycle helpers. They do **not** modify or execute the bundled gameplay code, and they are not currently wired into the four-part loader.
+This directory contains source auditing, standalone tests, and lifecycle helpers. The development branch also embeds a matching `Utility/RecoveryScope` module in the four-part QuietUI bundle. Diagnostic tools do not execute the gameplay bundle.
 
 ## Static source audit
 
@@ -25,7 +25,7 @@ The independent smoke test, `linoria_smoke.lua`, opens only a Linoria window wit
 
 The updated `QuietUI/loader.lua` on the review branch reports its initial stage through warnings and `getgenv().CM1QuietUIStatus` when available. The status `returned` means only that the top-level function returned without raising a synchronous error. It does not confirm that asynchronous game initialization, UI components, or background tasks succeeded.
 
-These Luau files are intentionally independent and are **not integrated** into the current bundle. Luau compilation, Studio runtime, live-game behavior, and reload tests have not been verified.
+The standalone MemorySampler remains independent, while RecoveryScope is integrated into the development bundle. GitHub Actions verifies Luau compilation and mocked runtime contracts; Studio execution, live-game behavior, and in-client reload behavior remain unverified.
 
 Memory figures are **whole-client** measurements, not per-feature allocations. A client-memory increase alone does not establish a leak. Compare multiple repeated runs against a baseline and include sample times and workload.
 
@@ -37,7 +37,7 @@ Memory figures are **whole-client** measurements, not per-feature allocations. A
 - Pin external UI dependencies to reviewed revisions.
 - Keep diagnostics explicit. Do not confuse silent console output with correct behavior.
 
-No modification here establishes runtime execution or detection safety. The original root loader and the QuietUI gameplay parts remain unchanged on this branch.
+No modification here establishes runtime execution or detection safety. The original root loader and its 14 source parts remain unchanged. The development branch's four QuietUI source parts contain intentional reviewed changes recorded in the current manifest.
 
 ## Development branch loader
 
@@ -66,3 +66,5 @@ The development branch carries the same RecoveryScope implementation in `devtool
 ## Controlled memory measurement
 
 `MemorySampler.new(label)` starts a labeled baseline and `sampler:reset(label)` starts another independent run. Samples retain both whole-client and available Lua-heap baselines, deltas, peaks and counts. A mocked Luau harness checks distinct runs, invalid samples, and scoped periodic collection. These readings include allocations outside BOTD; they must not be interpreted as proof of leakage without a controlled Roblox experiment.
+
+The legacy dependency inventory's `--strict` mode also rejects reintroducing imports in `MIGRATED`, starting with `Menu/Objects/FloatingWindow`. Add entries only after a consumer is migrated and independently tested.

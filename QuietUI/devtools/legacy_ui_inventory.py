@@ -9,6 +9,7 @@ import re
 import sys
 
 BASELINE = frozenset(["Luma","Features/Automation/AutoSaramed","Utility/Logger","Features/Automation/Objects/AutomationFeatures","Features/Automation/AutoNotes","Features/Automation/AutoMooneyrie","Features/Automation/AutoDuke","Features/Automation/AutoAuthority","Features/Automation/AutoTitus","Features/Automation/AutoFerryman","Features/Automation/AutoVoI","Features/Automation/AutoTo1","Features/Combat/Objects/Defender","Features/Combat/Objects/AnimatorDefender","Menu/AutoBuilderWindow","Features/Automation/AutoLayer2","Features/Automation/EchoFarm","Features/Combat/AnimationInspector","Features/Exploits/AnimationFlooder","Features/Game/AnimationVisualizer","Features/Visuals/ProximityList","Features/Custom/CustomAPI","Features/Custom/CustomWidgets","Menu/CustomTab","Menu/Objects/FloatingWindow","Menu/Objects/CodeEditor","Menu/CombatTab","Features/Combat/SilentAim","Menu/TimingBuilderTab","GUI/Linoria"])
+MIGRATED = frozenset({"Menu/Objects/FloatingWindow"})
 MODULE = re.compile(r'__bundle_register\("([^"]+)",\s*function')
 LEGACY = re.compile(r'require\(["\x27]GUI/Library["\x27]\)')
 REQUIRE_VAR = re.compile(r'\blocal\s+([A-Za-z_]\w*)\s*=\s*require\(["\x27]GUI/Library["\x27]\)')
@@ -46,6 +47,7 @@ def inspect(source: str) -> dict:
         "legacy_dependents": len(dependents),
         "unexpected_new_dependencies": sorted(names - BASELINE),
         "baseline_dependencies_removed": sorted(BASELINE - names),
+        "regressed_migrations": sorted(names & MIGRATED),
         "method_users": dict(sorted(method_counts.items(), key=lambda item: (-item[1], item[0]))),
         "property_users": dict(sorted(property_counts.items(), key=lambda item: (-item[1], item[0]))),
         "modules": sorted(dependents, key=lambda item: item["module"]),
@@ -70,7 +72,8 @@ def main() -> int:
         print(f'Legacy GUI: {report["legacy_dependents"]} dependent modules')
         print(f'Unexpected dependencies: {report["unexpected_new_dependencies"]}')
         print(f'Baseline consumers removed: {report["baseline_dependencies_removed"]}')
-    return 1 if args.strict and report["unexpected_new_dependencies"] else 0
+        print(f'Regressed migrations: {report["regressed_migrations"]}')
+    return 1 if args.strict and (report["unexpected_new_dependencies"] or report["regressed_migrations"]) else 0
 
 
 if __name__ == "__main__":
