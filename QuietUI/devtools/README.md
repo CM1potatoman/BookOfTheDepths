@@ -62,3 +62,7 @@ The development branch carries the same RecoveryScope implementation in `devtool
 ## Native Linoria floating window
 
 `Menu/Objects/FloatingWindow` now imports `GUI/Linoria` instead of `GUI/Library`, so windows are parented to Linoria's ScreenGui and use its native Create, registration, and dragging implementations. The isolated `floating_window_fixture.luau` verifies construction, presentation, callbacks and legacy-free import behavior with mocked Roblox GUI objects. Remaining legacy consumers still require migration; do not remove `GUI/Library` yet.
+
+## Controlled memory measurement
+
+`MemorySampler.new(label)` starts a labeled baseline and `sampler:reset(label)` starts another independent run. Samples retain both whole-client and available Lua-heap baselines, deltas, peaks and counts. A mocked Luau harness checks distinct runs, invalid samples, and scoped periodic collection. These readings include allocations outside BOTD; they must not be interpreted as proof of leakage without a controlled Roblox experiment.
