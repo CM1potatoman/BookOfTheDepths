@@ -58,3 +58,7 @@ When `getgenv().CM1QuietUIDebug == true`, `Utility/Logger.warn` and `.trace` app
 ## RecoveryScope lifecycle regression
 
 The development branch carries the same RecoveryScope implementation in `devtools/RecoveryScope.lua` and the bundled `Utility/RecoveryScope` module. Completed/failed worker registrations now retire immediately instead of remaining referenced until unload. CI executes `recovery_scope_fixture.luau` in mocked Luau, checking completion, cancellation, error isolation and 50 consecutive scope cycles. This is not an in-game reload verification.
+
+## Native Linoria floating window
+
+`Menu/Objects/FloatingWindow` now imports `GUI/Linoria` instead of `GUI/Library`, so windows are parented to Linoria's ScreenGui and use its native Create, registration, and dragging implementations. The isolated `floating_window_fixture.luau` verifies construction, presentation, callbacks and legacy-free import behavior with mocked Roblox GUI objects. Remaining legacy consumers still require migration; do not remove `GUI/Library` yet.

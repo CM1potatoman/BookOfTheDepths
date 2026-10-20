@@ -67,6 +67,15 @@ jobs:
           test -n "$runner"
           chmod +x "$runner"
           "$runner" "$RUNNER_TEMP/ui-adapter-smoke.luau"
+      - name: Exercise native Linoria FloatingWindow contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python QuietUI/devtools/floating_window_harness.py --out "$RUNNER_TEMP/floating-window-check.luau"
+          runner="$(find "$RUNNER_TEMP/luau" -type f -name luau -print -quit)"
+          test -n "$runner"
+          chmod +x "$runner"
+          "$runner" "$RUNNER_TEMP/floating-window-check.luau"
       - name: Exercise RecoveryScope lifecycle with mocked Luau runtime
         shell: bash
         run: |

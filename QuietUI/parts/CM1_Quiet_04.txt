@@ -7683,8 +7683,8 @@ __bundle_register("Menu/Objects/FloatingWindow", function(require, _LOADED, __bu
 -- Reusable floating, draggable window (title bar + close button + body) parented to the menu ScreenGui.
 -- new{ title, size, position } -> { frame, body, Show, Hide, Toggle, IsOpen, SetTitle }. Starts hidden.
 
----@module GUI.Library
-local Library = require("GUI/Library")
+---@module GUI.Linoria
+local Library = require("GUI/Linoria")
 
 local FloatingWindow = {}
 
