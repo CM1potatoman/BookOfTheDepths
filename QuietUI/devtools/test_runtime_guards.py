@@ -38,6 +38,15 @@ class TestRuntimeGuards(unittest.TestCase):
         self.assertIn("while enabled do", code)
         self.assertNotIn("while true do", code)
 
+    def test_cancellable_resume_tasks_integrated(self):
+        code = self.module("Luma")
+        self.assertIn('require("Utility/RecoveryScope")', code)
+        self.assertIn("resumeScope:close()", code)
+        self.assertEqual(code.count("resumeScope:spawn(function()"), 10)
+        self.assertNotIn("task.spawn(function()", code)
+        self.assertIn("CM1QuietUIDebug", code)
+        self.assertIn("function RecoveryScope:close()", self.module("Utility/RecoveryScope"))
+
     def test_linoria_and_addons_pinned(self):
         library = self.module("GUI/Linoria")
         addons = self.module("GUI/LinoriaAddons")
