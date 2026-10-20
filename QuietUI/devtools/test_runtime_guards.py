@@ -47,6 +47,15 @@ class TestRuntimeGuards(unittest.TestCase):
         self.assertIn("CM1QuietUIDebug", code)
         self.assertIn("function RecoveryScope:close()", self.module("Utility/RecoveryScope"))
 
+    def test_opt_in_diagnostics_are_bounded(self):
+        code = self.module("Utility/Logger")
+        self.assertIn("function Logger.warn(str, ...)", code)
+        self.assertIn("function Logger.trace(str, ...)", code)
+        self.assertIn("CM1QuietUIDiagnostics", code)
+        self.assertIn("CM1QuietUIDebug", code)
+        self.assertIn("if #entries >= 100 then", code)
+        self.assertNotIn("function Logger.warn(str, ...) end", code)
+
     def test_linoria_and_addons_pinned(self):
         library = self.module("GUI/Linoria")
         addons = self.module("GUI/LinoriaAddons")

@@ -50,3 +50,7 @@ The development bundle registers `Utility/RecoveryScope` and uses it to manage t
 ## Legacy GUI migration inventory
 
 Run `python QuietUI/devtools/legacy_ui_inventory.py --json` for a per-module list of legacy UI dependencies and the methods/properties each consumer calls. `--strict` rejects new legacy consumers relative to the existing 30-module baseline. Existing consumers can be migrated and removed from that list without breaking the check. This tool does not remove the legacy implementation or establish visual compatibility.
+
+## Opt-in diagnostics
+
+When `getgenv().CM1QuietUIDebug == true`, `Utility/Logger.warn` and `.trace` append records to `getgenv().CM1QuietUIDiagnostics`, keeping only the last 100 entries. This does not print, transmit, or persist diagnostics. With the flag off, calls return without buffering. Resume-worker errors are separately buffered in `CM1QuietUIErrors` with a 50-entry limit. These buffers do not validate runtime behavior; use them with reproducible test steps.

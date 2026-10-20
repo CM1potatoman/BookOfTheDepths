@@ -1,8 +1,8 @@
 -- CM1 Deepwoken / QuietUI loader
 -- Loading and diagnostics only. Does not alter gameplay modules.
 local base = "https://raw.githubusercontent.com/CM1potatoman/BookOfTheDepths/quietui-linoria-stability-20261019/QuietUI/parts/"
-local expected = { 1464684, 1210982, 1129481, 554779 }
-local expectedTotal = 4359926
+local expected = { 1464684, 1211385, 1129481, 554779 }
+local expectedTotal = 4360329
 local startedAt = os.clock()
 local stage = "initializing"
 
