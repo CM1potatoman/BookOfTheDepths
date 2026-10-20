@@ -38,3 +38,7 @@ Memory figures are **whole-client** measurements, not per-feature allocations. A
 - Keep diagnostics explicit. Do not confuse silent console output with correct behavior.
 
 No modification here establishes runtime execution or detection safety. The original root loader and the QuietUI gameplay parts remain unchanged on this branch.
+
+## Development branch loader
+
+The `quietui-linoria-stability-20261019` loader downloads the corresponding branch's source parts. The root `loader.lua` and the `main/QuietUI/loader.lua` production loader remain unchanged. The split-source length/hash manifest is updated alongside any intentional part modification. The isolated loader harness reads sizes from that manifest. Do not merge the draft PR until the development download path has been deliberately reviewed for production deployment.

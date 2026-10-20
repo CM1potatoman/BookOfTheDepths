@@ -5,6 +5,7 @@ The generated cases do not fetch Roblox content or execute any BOTD module.
 """
 
 import argparse
+import json
 from pathlib import Path
 
 CASES = {
@@ -24,7 +25,7 @@ local warn = function(message)
     warnings[#warnings + 1] = tostring(message)
 end
 
-local sizes = { 1459151, 1210621, 1129481, 554707 }
+local sizes = { @SIZES@ }
 local chunks = {}
 for i, size in ipairs(sizes) do
     chunks[i] = string.rep(" ", size)
@@ -53,7 +54,7 @@ local loadstring = function(input)
     if scenario == "compile-error" then
         return nil, "synthetic compilation failed"
     end
-    assert(type(input) == "string" and #input == 4353960, "incorrect assembled data")
+    assert(type(input) == "string" and #input == @TOTAL@, "incorrect assembled data")
     return function()
         if scenario == "runtime-error" then
             error("synthetic execution failed")
@@ -83,11 +84,16 @@ print("PASS " .. scenario .. " => " .. status.CM1QuietUIStatus.stage)
 '''
 
 
-def generate(loader_path: Path, output: Path) -> None:
+def generate(loader_path: Path, output: Path, manifest_path: Path) -> None:
     contents = loader_path.read_text(encoding="utf-8")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    sizes = [manifest["parts"][f"CM1_Quiet_{index:02d}.txt"] for index in range(1, 5)]
+    assert sum(sizes) == manifest["total_bytes"], "Invalid manifest total"
     output.mkdir(parents=True, exist_ok=True)
     for name, expected in CASES.items():
-        prelude = PRELUDE.replace("@CASE@", name)
+        prelude = (PRELUDE.replace("@CASE@", name)
+                   .replace("@SIZES@", ", ".join(str(size) for size in sizes))
+                   .replace("@TOTAL@", str(manifest["total_bytes"])))
         postlude = POSTLUDE.replace("@EXPECTED@", expected)
         assembled = prelude + contents + "\n" + postlude
         (output / f"{name}.luau").write_text(assembled, encoding="utf-8")
@@ -97,8 +103,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--loader", type=Path, default=Path("QuietUI/loader.lua"))
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path, default=Path("QuietUI/devtools/bundle_manifest.json"))
     args = parser.parse_args()
-    generate(args.loader, args.out)
+    generate(args.loader, args.out, args.manifest)
 
 
 if __name__ == "__main__":
