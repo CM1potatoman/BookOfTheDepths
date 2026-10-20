@@ -21137,10 +21137,28 @@ return LPH_NO_VIRTUALIZE(function()
 		table.clear(stats)
 	end
 
+	local reportingThread
+
+	function Profiler.stop()
+		if not enabled then
+			return
+		end
+		enabled = false
+		local activeThread = reportingThread
+		reportingThread = nil
+		if activeThread and type(task.cancel) == "function" then
+			pcall(task.cancel, activeThread)
+		end
+		table.clear(stats)
+	end
+
 	if enabled then
-		task.spawn(function()
-			while true do
+		reportingThread = task.spawn(function()
+			while enabled do
 				task.wait(reportInterval)
+				if not enabled then
+					break
+				end
 				Profiler.report()
 			end
 		end)

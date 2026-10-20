@@ -561,7 +561,13 @@ function Luma.detach()
 
 	pcall(EffectDispatcher.detach)
 
-	local bloxstrapRPCModule = get_bloxstrap_rpc()
+	local bloxstrapRPCModule
+	if type(get_bloxstrap_rpc) == "function" and not Luma.norpc then
+		local rpcOk, rpcValue = pcall(get_bloxstrap_rpc)
+		if rpcOk and type(rpcValue) == "table" and type(rpcValue.SetRichPresence) == "function" then
+			bloxstrapRPCModule = rpcValue
+		end
+	end
 
 	if bloxstrapRPCModule then
 		pcall(bloxstrapRPCModule.SetRichPresence, {
@@ -581,6 +587,10 @@ function Luma.detach()
 	end
 
 	pcall(Hooking.detach)
+
+	pcall(function()
+		require("Utility/Profiler").stop()
+	end)
 
     -- The native Linoria window and the old HUD have separate parents and cleanup paths.
     pcall(Library.Unload, Library)
