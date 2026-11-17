@@ -44,8 +44,19 @@ if type(getgenv) == "function" then
 end
 
 local logs = {}
+local status = {
+    phase = "starting",
+    parts_loaded = 0,
+    errors = {},
+    started_at = (type(os) == "table" and type(os.clock) == "function") and os.clock() or nil,
+}
 if hostEnv then
     hostEnv[BUFFER_KEY] = logs
+    hostEnv.__CM1_BOTD_LOADER_STATUS = status
+end
+
+local function mark(phase)
+    status.phase = phase
 end
 
 local function log(level, ...)
@@ -57,6 +68,9 @@ local function log(level, ...)
     end
     local line = LOG_PREFIX .. "[" .. level .. "] " .. table.concat(fields, " ")
     logs[#logs + 1] = line
+    if level == "ERROR" then
+        status.errors[#status.errors + 1] = line
+    end
     if #logs > BUFFER_LIMIT then
         table.remove(logs, 1)
     end
@@ -103,6 +117,7 @@ end
 
 local parts = {}
 for index, size in ipairs(EXPECTED) do
+    mark("downloading_part_" .. index)
     local name = string.format("CM1_Quiet_%02d.txt", index)
     log("INFO", "Fetching", name, "expected bytes:", size)
     local ok, body = pcall(function()
@@ -121,6 +136,7 @@ for index, size in ipairs(EXPECTED) do
         return
     end
     parts[index] = body
+    status.parts_loaded = index
     log("INFO", "Validated part:", name)
 end
 
@@ -131,6 +147,7 @@ if #source ~= EXPECTED_TOTAL then
     return
 end
 
+mark("compiling")
 log("INFO", "Compiling source:", #source, "bytes")
 local compiled, compileError = loadstring(source, "@CM1/BookOfTheDepths/QuietUI")
 source = nil
@@ -164,11 +181,14 @@ else
     log("WARN", "Scoped output redirection unsupported in this runtime")
 end
 
+mark("executing")
 log("INFO", "Executing compiled chunk")
 local ok, result = xpcall(compiled, traceback)
 if not ok then
+    mark("runtime_error")
     log("ERROR", "Runtime failure:", result)
     return
 end
+mark("complete")
 log("INFO", "Compiled chunk returned successfully")
 return result
