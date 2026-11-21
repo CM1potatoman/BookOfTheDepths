@@ -1,6 +1,6 @@
 -- Book of the Depths: standalone event information + safe runtime support.
 -- Timer model adapted from whensthenextworldevent (MIT, copyright 2026 riven).
--- See https://github.com/riven/whensthenextworldevent for upstream licensing.
+-- Original user-provided whensthenextworldevent archive is MIT licensed.\n-- See QuietUI/THIRD_PARTY_NOTICES.md for the required notice.
 -- The clock is an estimate based on a public schedule, not server-confirmed.
 local ROOT_KEY = "__CM1_BOTD_SUPPORT_V1"
 local SETTINGS_PATH = "CM1_BOTD_SupportSettings.json"
@@ -273,7 +273,7 @@ local function makeGui()
             panelStart = panel.Position
         end
     end))
-    trackConnection(header.InputEnded:Connect(function(input)
+    trackConnection(inputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
