@@ -181,6 +181,36 @@ else
     log("WARN", "Scoped output redirection unsupported in this runtime")
 end
 
+-- Install optional event/support services independently of the opaque source bundle.
+-- On merged builds, main is preferred; branch fallback enables pre-merge testing.
+local SUPPORT_URLS = {
+    "https://raw.githubusercontent.com/CM1potatoman/BookOfTheDepths/main/QuietUI/support.lua",
+    "https://raw.githubusercontent.com/CM1potatoman/BookOfTheDepths/feature/botd-integrated-event-support-20261121/QuietUI/support.lua",
+}
+local function startSupport()
+    for _, url in ipairs(SUPPORT_URLS) do
+        local fetched, body = pcall(function() return game:HttpGet(url) end)
+        if fetched and type(body) == "string" and #body >= 2000 then
+            local chunk, compileErr = loadstring(body, "@CM1/BookOfTheDepths/QuietUI/support")
+            body = nil
+            if chunk then
+                local worked, supportOrError = xpcall(chunk, traceback)
+                if worked then
+                    log("INFO", "Event/support module initialized")
+                    return supportOrError
+                end
+                log("ERROR", "Event/support initialization failed:", supportOrError)
+            else
+                log("ERROR", "Event/support compilation failed:", compileErr)
+            end
+            return
+        end
+    end
+    log("WARN", "Event/support module unavailable; primary bundle remains unaffected")
+end
+
+startSupport()
+
 mark("executing")
 log("INFO", "Executing compiled chunk")
 local ok, result = xpcall(compiled, traceback)
